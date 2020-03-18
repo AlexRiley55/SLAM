@@ -8,14 +8,14 @@ from BreezySLAM.examples.mines import MinesLaser, Rover, load_data
 from driveable_robot import DriveableLaser as Laser
 from driveable_robot import DriveableRobot as Robot
 
-import pgm_parser.pgm_parser
+import BreezySLAM.examples.pgm_utils as pgm
 
 # Map size, scale
 MAP_SIZE_PIXELS          = 800
 MAP_SIZE_METERS          =  32
 
-data = readpgm('/location/of/file.pgm')
-map = bytearray(MAP_SIZE_PIXELS * MAP_SIZE_PIXELS) #TODO: load from file
+map, map_size = pgm.pgm_load("input/map_test.pgm") #TODO: move to main
+#TODO: check that dims are as expected / adjest program to fit dims
 
 # Start Pos
 START_POS                = np.array([8.0, 28.0])
