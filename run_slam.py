@@ -17,20 +17,39 @@ from BreezySLAM.examples.pgm_utils import pgm_save
 from sys import argv, exit, stdout
 from time import time
 
+from engine import Map
+from engine import raytrace
+
+import numpy as np
+
 def main():
-	    
+
+    map = Map()
+    pos = np.array([0,0])
+    rot = np.array([-1, 2])
+
+    #print(raytrace(pos, rot, 0.5, map).pos)
+
+    #laser = Laser()
+    #for timestamp, raycastHit in laser.laser_generator(pos, 100, map):
+    #    print(raycastHit.dist)
+
     # Bozo filter for input args
     if len(argv) < 4:
         print('Usage:   %s <dataset> <output_dir> <use_odometry> [random_seed]' % argv[0])
         print('Example: %s exp2 output 1 9999' % argv[0])
         exit(1)
-    
+
+    print(argv[3])
+
+    #TODO: handle this input better
+
     # Grab input args
     dataset = argv[1]
-    use_odometry = True if int(argv[2]) else False
-    seed =  int(argv[3])
-    output_filename = argv[4]
-    draw_trajectory = True if int(argv[5]) else False
+    use_odometry = True if int(argv[3]) else False
+    seed =  int(argv[4])
+    output_filename = argv[5] if len(argv) > 5 else "output.pgm"
+    draw_trajectory = False if len(argv) > 6 and not int(argv[6]) else True
     
     print("dataset: " + dataset)
     print("use_odometry: " + str(use_odometry))
@@ -40,7 +59,10 @@ def main():
 
 	# Load the data from the file, ignoring timestamps
     _, lidars, odometries = load_data('.', dataset)
-    
+
+    #print("lidars: ", len(lidars))
+    #print("odometries: ", len(odometries))
+
     # Build a robot model if we want odometry
     robot = Robot() if use_odometry else None
         
@@ -110,7 +132,7 @@ def main():
             x_pix = mm2pix(x_mm)
             y_pix = mm2pix(y_mm)
                                                                                               
-            mapbytes[y_pix * MAP_SIZE_PIXELS + x_pix] = 0;
+            mapbytes[y_pix * MAP_SIZE_PIXELS + x_pix] = 0
                     
     # Save map and trajectory as PGM file    
     pgm_save(output_filename, mapbytes, (MAP_SIZE_PIXELS, MAP_SIZE_PIXELS))
@@ -118,8 +140,7 @@ def main():
 # Helpers ---------------------------------------------------------        
 
 def mm2pix(mm):
-        
-    return int(mm / (MAP_SIZE_METERS * 1000. / MAP_SIZE_PIXELS))  
+    return int(mm / (MAP_SIZE_METERS * 1000. / MAP_SIZE_PIXELS))
     
                     
 main()
