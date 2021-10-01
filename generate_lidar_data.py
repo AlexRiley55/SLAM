@@ -36,7 +36,9 @@ START_ROT                = 0
 INITIAL_TIMESTAMP        = 0
 
 # Waypoints
+#WAYPOINTS = np.array([[5000.0, 5000.0], [9000.0, 5000.0], [9000.0, 1000.0]])
 WAYPOINTS = np.array([[5000.0, 5000.0], [9000.0, 5000.0], [9000.0, 1000.0], [9000.0, 5000.0], [9000.0, 9000.0], [6500.0, 9000.0], [6500.0, 1000.0], [6500.0, 9000.0],[1000.0, 9000.0], [1000.0, 1000.0]])
+#WAYPOINTS = np.array([[5000.0, 5000.0]])
 
 SPEED = 1.0
 
@@ -74,7 +76,6 @@ next_waypoint_index = 0
 #print(lidars)
 
 laser = Laser()
-rot_gen = laser.rotation_generator(INITIAL_TIMESTAMP, START_ROT)
 
 robot = Robot()
 
@@ -85,47 +86,74 @@ last_timestamp = INITIAL_TIMESTAMP
 map = Map()
 
 dataList = []
-while next_waypoint_index < WAYPOINTS.shape[0]:
-	print(np.linalg.norm(vehicle_pos - WAYPOINTS[next_waypoint_index]))
+laserList = []
 
-	timestamp, next_rot = next(rot_gen)
-	timestamp_queue.put((timestamp, "lidar", next_rot))
+timestamp = 0
+
+velocity = np.array([0, 0])
+delta_time = 0
+
+last_pos = vehicle_pos
+last_vel = np.array([SPEED * np.cos(START_ROT), SPEED * np.sin(START_ROT)])
+
+while next_waypoint_index < WAYPOINTS.shape[0]:
+	# print(np.linalg.norm(vehicle_pos - WAYPOINTS[next_waypoint_index]))
+
+	#timestamp_queue.put((timestamp, "lidar", next_rot))
 	#other sensor data would go here
 
-	next_operation = timestamp_queue.get()
+	#next_operation = timestamp_queue.get()
 
 	#TODO: check if multiple operations share the same timestamp
 	#TODO: add a check for some minimum distance to travel regardless of sensors (don't record it though)
 
-	delta_time = next_operation[0] - last_timestamp
+	# if next_operation[1] == "lidar":
+	laser_data = laser.laser_generator(vehicle_pos, map)
+
+	#if laser_data is not None:
+	#	print("distance: ", laser_data.dist)
+	#	print("hit pos: ", laser_data.pos)
+	#	recordToMap(laser_data.pos)
+
+	for l in laser_data:
+		if l is not None:
+			recordToMap(l.pos)
+	recordToMap(vehicle_pos)
+
+	od_left, od_right = robot.computeOdometryChange(last_vel, last_pos, velocity, vehicle_pos)
+
+	print("---------------------------")
+	print("timestamp: ", len(dataList))
+	print("time: ", timestamp)
+	print("vehicle pos: ", vehicle_pos)
+	print("vehicle velocity: ", velocity)
+
+	print("last pos: ", last_pos)
+	print("last velocity: ", last_vel)
+
+	print("vehicle odometry: ", od_left, od_right)
+	print("next waypoint: " + str(next_waypoint_index))
+
+	dataList.append(Data(timestamp, laser_data, np.array((od_left, od_right))))
+
+	last_pos = vehicle_pos.copy()
+	last_vel = velocity.copy()
+	last_timestamp = timestamp
+
+	timestamp += laser.min_timestamp()
+
+	delta_time = timestamp - last_timestamp
 	delta_time = round(delta_time, 14)
-	#better to have less precision then have float errors here as errors quickly compound
+	# better to have less precision then have float errors here as errors quickly compound
 
-	print("dt: ", delta_time)
+	# print("dt: ", delta_time)
+
 	dir = normalize(WAYPOINTS[next_waypoint_index] - vehicle_pos)
-	vehicle_pos += dir * SPEED * delta_time
-	
-	if next_operation[1] == "lidar":
-		#laser_data = laser.calc_laser(vehicle_pos, next_operation[3])
-		rot = next_operation[2]
-		rotVec = np.array([math.sin(rot), math.cos(rot)])
-		laser_data = raytrace(vehicle_pos, rotVec, laser.distance_no_detection_mm, map)
-
-		print("---------------------------")
-		print("timestamp: ", len(dataList))
-		print("time: ", timestamp)
-		print("vehicle pos: ", vehicle_pos)
-		if laser_data is not None:
-			print("distance: ", laser_data.dist)
-			print("hit pos: ", laser_data.pos)
-			recordToMap(laser_data.pos)
-
-		recordToMap(vehicle_pos)
-		dataList.append(Data(timestamp, vehicle_pos, laser_data))
+	velocity = dir * SPEED
+	vehicle_pos += velocity * delta_time
 
 	if np.linalg.norm(vehicle_pos - WAYPOINTS[next_waypoint_index]) < SPEED * delta_time:
 		next_waypoint_index += 1
-		print("next waypoint: " + str(next_waypoint_index))
 
 save_data(".", "data", dataList)
 pgm_save("a.pgm", mapbytes, (MAP_SIZE_PIXELS, MAP_SIZE_PIXELS))

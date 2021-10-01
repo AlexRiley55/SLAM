@@ -135,9 +135,9 @@ def raytrace(pos, rot, maxDist, map):
     # return RayHit
 
 class Data:
-    timestamp = None
-    lidar = None
-    odometry = None
+    #timestamp = None
+    #lidar = None
+    #odometry = None
 
     def __init__(self, timestamp, lidar, odometry):
         self.timestamp = timestamp
@@ -155,16 +155,59 @@ def save_data(datadir, dataset, dataList):
         s = str(int(data.timestamp))
 
         if data.odometry is not None:
-            s += " 0 " + str(int(data.odometry.pos[0])) + " " + str(int(data.odometry.pos[1]))
+            s += " 0 " + str(int(data.odometry[0])) + " " + str(int(data.odometry[1]))
         else:
             s += " 0 0 0"
 
-        for j in range(0, 20):
+        print("size: " + str(len(data.lidar)))
+
+        for i in range(4, 24):
             s += " 0"
 
-        if data.lidar is not None:
-            s += " " + str(int(data.lidar[0])) + " " + str(int(data.lidar[1]))
+        print("len:" + str(len(data.lidar)))
 
-        fd.write(s + "\n")
+        for hit in data.lidar:
+            if hit is None:
+                s += " 0"
+            else:
+                s += " " + str(int(hit.dist))
+
+        fd.write(s + " 0 \n")
 
     fd.close()
+
+
+def angleBetweenVectors(u, v):
+
+    if np.array_equal(u, v):
+        return 0
+
+    u_mag = np.linalg.norm(u)
+    if u_mag == 0:
+        u_hat = np.array([0, 0])
+    else:
+        u_hat = u / u_mag
+
+    v_mag = np.linalg.norm(v)
+    if v_mag == 0:
+        v_hat = np.array([0, 0])
+    else:
+        v_hat = v / v_mag
+
+    return np.arccos(np.dot(u_hat, v_hat))
+
+def angleOfVector(v):
+    if v[0] == 0:
+        if v[1] > 0:
+            return np.pi / 2
+        elif v[1] < 0:
+            return np.pi * 1.5
+        else:
+            return 0
+    else:
+        return np.arctan(v[1] / v[0])
+
+
+def rotationVec(theta):
+    return np.array(((np.cos(theta), -np.sin(theta)),
+                      (np.sin(theta), np.cos(theta))))

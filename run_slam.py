@@ -40,8 +40,6 @@ def main():
         print('Example: %s exp2 output 1 9999' % argv[0])
         exit(1)
 
-    print(argv[3])
-
     #TODO: handle this input better
 
     # Grab input args
